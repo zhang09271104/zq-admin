@@ -1,0 +1,109 @@
+stages:
+  - install
+  - lint
+  - test
+  - build
+  - deploy
+
+variables:
+  NODE_VERSION: "18"
+
+# 缓存依赖
+cache:
+  paths:
+    - node_modules/
+
+# 安装依赖
+install:
+  stage: install
+  image: node:${NODE_VERSION}
+  script:
+    - npm ci
+  artifacts:
+    paths:
+      - node_modules/
+    expire_in: 1 hour
+
+# 代码检查
+lint:
+  stage: lint
+  image: node:${NODE_VERSION}
+  script:
+    - npm run lint
+  dependencies:
+    - install
+
+# 运行测试
+test:
+  stage: test
+  image: node:${NODE_VERSION}
+  script:
+    - npm run test
+  dependencies:
+    - install
+
+# 构建开发环境
+build:dev:
+  stage: build
+  image: node:${NODE_VERSION}
+  script:
+    - npm run build:dev
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 week
+  only:
+    - develop
+  dependencies:
+    - install
+
+# 构建生产环境
+build:prod:
+  stage: build
+  image: node:${NODE_VERSION}
+  script:
+    - npm run build:prod
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 month
+  only:
+    - main
+  dependencies:
+    - install
+
+# 部署到开发环境
+deploy:dev:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client rsync
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+  script:
+    - rsync -avz --delete dist/ $DEV_SERVER_USER@$DEV_SERVER_HOST:/var/www/dev
+  only:
+    - develop
+  dependencies:
+    - build:dev
+
+# 部署到生产环境
+deploy:prod:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client rsync
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+  script:
+    - rsync -avz --delete dist/ $PROD_SERVER_USER@$PROD_SERVER_HOST:/var/www/prod
+    - ssh $PROD_SERVER_USER@$PROD_SERVER_HOST "sudo systemctl restart nginx"
+  only:
+    - main
+  when: manual  # 生产环境需要手动触发
+  dependencies:
+    - build:prod
