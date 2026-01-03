@@ -21,42 +21,7 @@ jobs:
   lint-and-test:
     name: 🔍 Lint and Test
     runs-on: ubuntu-latest
-
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 📦 Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8  # 或者使用 'latest'
-
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'  # ✅ 使用 pnpm 缓存
-
-      - name: 📚 Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: 🔍 Run ESLint
-        run: pnpm run lint
-        continue-on-error: false  # lint 失败则停止
-
-      - name: 🧪 Run tests
-        run: pnpm run test || echo "⚠️ No tests configured"
-        continue-on-error: true
-
-      - name: 📊 Type check
-        run: pnpm run type-check || echo "⚠️ No type check configured"
-        continue-on-error: true
-
-  # ==================== 构建应用 ====================
-  build:
-    name: 🏗️ Build Application
-    needs: lint-and-test
-    runs-on: ubuntu-latest
+    timeout-minutes: 10  # ✅ 添加超时限制
 
     steps:
       - name: 📥 Checkout code
@@ -76,6 +41,45 @@ jobs:
       - name: 📚 Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: 🔍 Run ESLint
+        run: pnpm run lint
+        continue-on-error: false
+
+      - name: 🧪 Run tests
+        run: pnpm run test || echo "⚠️ No tests configured"
+        continue-on-error: true
+
+      - name: 📊 Type check
+        run: pnpm run type-check || echo "⚠️ No type check configured"
+        continue-on-error: true
+
+  # ==================== 构建应用 ====================
+  build:
+    name: 🏗️ Build Application
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 📚 Install dependencies
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm store prune  # ✅ 清理缓存
+
       - name: 🏗️ Build for production
         run: pnpm run build:prod || pnpm run build
         env:
@@ -88,6 +92,7 @@ jobs:
           name: dist-${{ github.sha }}
           path: dist/
           retention-days: 7
+          compression-level: 9  # ✅ 最大压缩
 
       - name: 📊 Build summary
         run: |
@@ -96,13 +101,19 @@ jobs:
           echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Build size:** $(du -sh dist/ | cut -f1)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Files count:** $(find dist/ -type f | wc -l)" >> $GITHUB_STEP_SUMMARY
 
   # ==================== 部署到服务器 ====================
   deploy:
     name: 🚀 Deploy to Server
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+    timeout-minutes: 10
+    # ✅ 添加 secrets 检查
+    if: |
+      github.event_name == 'push' && 
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') &&
+      secrets.SERVER_HOST != ''
 
     steps:
       - name: 📥 Download build artifacts
@@ -120,8 +131,9 @@ jobs:
           port: ${{ secrets.SERVER_PORT || 22 }}
           source: "dist/*"
           target: ${{ secrets.DEPLOY_PATH || '/var/www/html' }}
-          strip_components: 1  # 移除 dist/ 前缀
+          strip_components: 1
           overwrite: true
+          timeout: 5m  # ✅ 添加超时
 
       - name: 🔄 Restart Nginx
         uses: appleboy/ssh-action@v1.0.3
@@ -130,12 +142,28 @@ jobs:
           username: ${{ secrets.SERVER_USERNAME }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT || 22 }}
+          timeout: 30s  # ✅ 添加超时
           script: |
             echo "🔄 Restarting Nginx..."
-            sudo systemctl reload nginx || sudo systemctl restart nginx
-            echo "✅ Nginx restarted successfully"
             
-            # 清理旧的备份（可选）
+            # 测试配置
+            sudo nginx -t
+            
+            # 重载服务
+            sudo systemctl reload nginx || sudo systemctl restart nginx
+            
+            # 等待启动
+            sleep 2
+            
+            # 健康检查
+            if curl -f http://localhost/ > /dev/null 2>&1; then
+              echo "✅ Nginx restarted successfully"
+            else
+              echo "⚠️ Health check failed"
+              exit 1
+            fi
+            
+            # 清理旧备份
             cd ${{ secrets.DEPLOY_PATH || '/var/www/html' }}
             find . -name "backup-*" -mtime +7 -delete || true
 
@@ -146,14 +174,19 @@ jobs:
           echo "- **Environment:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Server:** ${{ secrets.SERVER_HOST }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Deploy path:** ${{ secrets.DEPLOY_PATH || '/var/www/html' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Time:** $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Time:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
 
   # ==================== 构建 Docker 镜像 ====================
   build-docker:
     name: 🐳 Build Docker Image
     needs: lint-and-test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    timeout-minutes: 20
+    # ✅ 添加 secrets 检查
+    if: |
+      github.event_name == 'push' && 
+      github.ref == 'refs/heads/main' &&
+      secrets.DOCKER_USERNAME != ''
 
     steps:
       - name: 📥 Checkout code
@@ -193,6 +226,8 @@ jobs:
           build-args: |
             NODE_VERSION=20
             PNPM_VERSION=8
+          # ✅ 添加平台支持
+          platforms: linux/amd64,linux/arm64
 
       - name: 📊 Docker build summary
         run: |
@@ -202,6 +237,8 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
 
   # ==================== 通知 ====================
   notify:
@@ -211,10 +248,23 @@ jobs:
     if: always()
 
     steps:
-      - name: 📢 Send notification
+      - name: 📊 Generate summary
         run: |
-          if [ "${{ needs.deploy.result }}" == "success" ] && [ "${{ needs.build-docker.result }}" == "success" ]; then
-            echo "✅ All jobs completed successfully!"
+          echo "### 📊 Workflow Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Deploy | ${{ needs.deploy.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker | ${{ needs.build-docker.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          DEPLOY="${{ needs.deploy.result }}"
+          DOCKER="${{ needs.build-docker.result }}"
+          
+          if [ "$DEPLOY" == "success" ] || [ "$DOCKER" == "success" ]; then
+            echo "✅ **Overall Status:** Success" >> $GITHUB_STEP_SUMMARY
+          elif [ "$DEPLOY" == "skipped" ] && [ "$DOCKER" == "skipped" ]; then
+            echo "⏭️ **Overall Status:** Skipped (no deployment needed)" >> $GITHUB_STEP_SUMMARY
           else
-            echo "⚠️ Some jobs failed or were skipped"
+            echo "❌ **Overall Status:** Failed" >> $GITHUB_STEP_SUMMARY
           fi
