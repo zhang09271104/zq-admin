@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
+    "build:dev": "vue-tsc && vite build --mode development",
+    "build:prod": "vue-tsc && vite build --mode production",
+    "test": "vitest",
     "preview": "vite preview",
     "lint": "eslint src --ext .ts,.tsx,.vue --fix",
     "format": "prettier --write \"src/**/*.{js,ts,vue,scss,css,html,json}\"",
