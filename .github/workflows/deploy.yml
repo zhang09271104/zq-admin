@@ -15,6 +15,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# ==================== 全局环境变量 ====================
+env:
+  PNPM_VERSION: 10.18.2  # 统一 pnpm 版本
+  NODE_VERSION: 20
+
 jobs:
   # ==================== 代码检查和测试 ====================
   lint-and-test:
@@ -29,16 +34,15 @@ jobs:
       - name: 📦 Install pnpm
         uses: pnpm/action-setup@v2
         with:
-          version: 8
+          version: ${{ env.PNPM_VERSION }}
 
       - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'pnpm'
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: 📚 Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: 🔍 Run ESLint
         run: pnpm run lint || echo "⚠️ Lint skipped"
@@ -62,16 +66,15 @@ jobs:
       - name: 📦 Install pnpm
         uses: pnpm/action-setup@v2
         with:
-          version: 10.18.2
+          version: ${{ env.PNPM_VERSION }}
 
       - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'pnpm'
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: 📚 Install dependencies
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
 
       - name: 🏗️ Build for production
         run: pnpm run build:prod || pnpm run build
@@ -91,9 +94,10 @@ jobs:
           echo "### ✅ Build Successful" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           if [ -d "dist" ]; then
             echo "- **Build size:** $(du -sh dist/ | cut -f1)" >> $GITHUB_STEP_SUMMARY
+            echo "- **Files:** $(find dist -type f | wc -l)" >> $GITHUB_STEP_SUMMARY
           fi
 
   # ==================== 部署到服务器 ====================
@@ -111,11 +115,13 @@ jobs:
           name: dist-${{ github.sha }}
           path: dist/
 
+      - name: 📋 List files to deploy
+        run: |
+          echo "📦 Files to deploy:"
+          ls -la dist/
+
       - name: 🚀 Deploy to server via SCP
         uses: appleboy/scp-action@v0.1.7
-        if: env.SERVER_HOST != ''
-        env:
-          SERVER_HOST: ${{ secrets.SERVER_HOST }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USERNAME }}
@@ -128,9 +134,6 @@ jobs:
 
       - name: 🔄 Restart Nginx
         uses: appleboy/ssh-action@v1.0.3
-        if: env.SERVER_HOST != ''
-        env:
-          SERVER_HOST: ${{ secrets.SERVER_HOST }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USERNAME }}
@@ -140,6 +143,16 @@ jobs:
             echo "🔄 Restarting Nginx..."
             sudo systemctl reload nginx || sudo systemctl restart nginx
             echo "✅ Nginx restarted successfully"
+            echo "📊 Deployment info:"
+            ls -la ${{ secrets.DEPLOY_PATH || '/var/www/html' }} | head -10
+
+      - name: 📊 Deploy summary
+        run: |
+          echo "### 🚀 Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Server:** \`${{ secrets.SERVER_HOST }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Path:** \`${{ secrets.DEPLOY_PATH || '/var/www/html' }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Time:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
 
   # ==================== 构建 Docker 镜像 ====================
   build-docker:
@@ -147,7 +160,7 @@ jobs:
     needs: lint-and-test
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_DOCKER == 'true'
 
     steps:
       - name: 📥 Checkout code
@@ -158,9 +171,6 @@ jobs:
 
       - name: 🔐 Login to Docker Hub
         uses: docker/login-action@v3
-        if: env.DOCKER_USERNAME != ''
-        env:
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
@@ -188,9 +198,9 @@ jobs:
   # ==================== 通知 ====================
   notify:
     name: 📢 Notify
-    needs: [deploy, build-docker]
+    needs: [build, deploy]
     runs-on: ubuntu-latest
-    if: always()
+    if: always() && github.event_name == 'push'
 
     steps:
       - name: 📊 Generate summary
@@ -199,5 +209,8 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Deploy | ${{ needs.deploy.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Docker | ${{ needs.build-docker.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🏗️ Build | ${{ needs.build.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🚀 Deploy | ${{ needs.deploy.result == 'success' && '✅ Success' || needs.deploy.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
