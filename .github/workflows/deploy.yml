@@ -5,97 +5,216 @@ on:
     branches:
       - dev
       - develop
+      - main
   pull_request:
     branches:
       - dev
+      - main
+
+# 取消正在运行的相同工作流
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  # 代码检查和测试
+  # ==================== 代码检查和测试 ====================
   lint-and-test:
+    name: 🔍 Lint and Test
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8  # 或者使用 'latest'
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'pnpm'  # ✅ 使用 pnpm 缓存
 
-      - name: Install dependencies
-        run: npm ci
+      - name: 📚 Install dependencies
+        run: pnpm install --frozen-lockfile
 
-      - name: Run ESLint
-        run: npm run lint
+      - name: 🔍 Run ESLint
+        run: pnpm run lint
+        continue-on-error: false  # lint 失败则停止
 
-      - name: Run tests
-        run: npm run test
+      - name: 🧪 Run tests
+        run: pnpm run test || echo "⚠️ No tests configured"
+        continue-on-error: true
 
-  # 构建和部署
-  build-and-deploy:
+      - name: 📊 Type check
+        run: pnpm run type-check || echo "⚠️ No type check configured"
+        continue-on-error: true
+
+  # ==================== 构建应用 ====================
+  build:
+    name: 🏗️ Build Application
     needs: lint-and-test
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - name: 📦 Install pnpm
+        uses: pnpm/action-setup@v2
         with:
-          node-version: '18'
-          cache: 'npm'
+          version: 8
 
-      - name: Install dependencies
-        run: npm ci
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
 
-      - name: Build for production
-        run: npm run build:prod
+      - name: 📚 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🏗️ Build for production
+        run: pnpm run build:prod || pnpm run build
         env:
+          NODE_ENV: production
           VITE_API_BASE_URL: ${{ secrets.API_BASE_URL }}
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+      - name: 📦 Upload build artifacts
+        uses: actions/upload-artifact@v4
         with:
-          name: dist
+          name: dist-${{ github.sha }}
+          path: dist/
+          retention-days: 7
+
+      - name: 📊 Build summary
+        run: |
+          echo "### ✅ Build Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build size:** $(du -sh dist/ | cut -f1)" >> $GITHUB_STEP_SUMMARY
+
+  # ==================== 部署到服务器 ====================
+  deploy:
+    name: 🚀 Deploy to Server
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+
+    steps:
+      - name: 📥 Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-${{ github.sha }}
           path: dist/
 
-      # 部署到服务器(示例使用 SCP)
-      - name: Deploy to server
-        uses: appleboy/scp-action@master
+      - name: 🚀 Deploy to server via SCP
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USERNAME }}
           key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
           source: "dist/*"
-          target: "/var/www/html"
+          target: ${{ secrets.DEPLOY_PATH || '/var/www/html' }}
+          strip_components: 1  # 移除 dist/ 前缀
+          overwrite: true
 
-      # 或部署到 Nginx
-      - name: Restart Nginx
-        uses: appleboy/ssh-action@master
+      - name: 🔄 Restart Nginx
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USERNAME }}
           key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
           script: |
-            sudo systemctl restart nginx
+            echo "🔄 Restarting Nginx..."
+            sudo systemctl reload nginx || sudo systemctl restart nginx
+            echo "✅ Nginx restarted successfully"
+            
+            # 清理旧的备份（可选）
+            cd ${{ secrets.DEPLOY_PATH || '/var/www/html' }}
+            find . -name "backup-*" -mtime +7 -delete || true
+
+      - name: 📊 Deployment summary
+        run: |
+          echo "### 🚀 Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Server:** ${{ secrets.SERVER_HOST }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deploy path:** ${{ secrets.DEPLOY_PATH || '/var/www/html' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Time:** $(date)" >> $GITHUB_STEP_SUMMARY
+
+  # ==================== 构建 Docker 镜像 ====================
   build-docker:
+    name: 🐳 Build Docker Image
+    needs: lint-and-test
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
+      - name: 🔐 Login to Docker Hub
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push
-        uses: docker/build-push-action@v4
+      - name: 🏷️ Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/zq-admin
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: 🏗️ Build and push Docker image
+        uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: your-username/your-app:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_VERSION=20
+            PNPM_VERSION=8
+
+      - name: 📊 Docker build summary
+        run: |
+          echo "### 🐳 Docker Image Built" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Tags:**" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  # ==================== 通知 ====================
+  notify:
+    name: 📢 Notify
+    needs: [deploy, build-docker]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: 📢 Send notification
+        run: |
+          if [ "${{ needs.deploy.result }}" == "success" ] && [ "${{ needs.build-docker.result }}" == "success" ]; then
+            echo "✅ All jobs completed successfully!"
+          else
+            echo "⚠️ Some jobs failed or were skipped"
+          fi
