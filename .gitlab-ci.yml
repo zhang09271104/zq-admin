@@ -6,7 +6,7 @@ stages:
   - deploy
 
 variables:
-  NODE_VERSION: "18"
+  NODE_VERSION: "20"
 
 # 缓存依赖
 cache:
