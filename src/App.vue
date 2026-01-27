@@ -1,18 +1,21 @@
 <template>
   <div id="app">
-    <router-view />
-    <!--    <Home/>-->
+    <h1>测试svg图标</h1>
+    <Pagination />
+    <svg-icon name="phone" color="green" width="100px" height="100px" />
   </div>
 </template>
 
 <script setup lang="ts">
-// import Home from "@views/Home.vue";
-// 可以在这里添加全局逻辑
+// import SvgIcon from "@/components/SvgIcon/index.vue";
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 #app {
   width: 100%;
   min-height: 100vh;
+  h1 {
+    color: $primary-color;
+  }
 }
 </style>
