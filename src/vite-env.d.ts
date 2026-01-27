@@ -1,4 +1,10 @@
 /// <reference types="vite/client" />
+// src/vite-env.d.ts
+
+declare module 'virtual:svg-icons-register' {
+  const component: any
+  export default component
+}
 
 interface ImportMetaEnv {
   readonly VITE_APP_TITLE: string
