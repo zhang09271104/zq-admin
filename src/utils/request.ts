@@ -13,7 +13,6 @@ const request = axios.create({
 
 //第二步:request实例添加请求拦截器(config配置对象,headers属性请求头,经常给服务器端携带公共参数)
 request.interceptors.request.use((config) => {
-  console.log('config---', config)
   //获取用户相关的小仓库:获取仓库内部token,登录成功以后携带给服务器
   const userStore = useUserStore()
   if (userStore.token) {
@@ -26,7 +25,6 @@ request.interceptors.request.use((config) => {
 //第三步:request实例添加响应拦截器
 request.interceptors.response.use(
   (response) => {
-    console.log('response---', response)
     //成功回调
     //简化数据
     return response.data
@@ -34,7 +32,6 @@ request.interceptors.response.use(
   (error) => {
     //失败回调:处理http网络错误的
     // 定义一个变量:存储网络错误信息
-    console.log('error---', error)
     let message = ''
     //http状态码
     const status = error.response.status
