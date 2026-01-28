@@ -12,7 +12,7 @@ export interface loginResponseData {
 }
 
 interface dataType {
-  dataType: string
+  token: string
 }
 
 //定义服务器返回用户数据数据类型

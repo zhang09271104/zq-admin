@@ -1,10 +1,10 @@
 import { createApp } from 'vue'
-import { createPinia } from 'pinia'
-import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import App from './App.vue'
 import router from './router/index.ts'
-
+//引入仓库
+import pinia from '@/store/index.ts'
 import ElementPlus from 'element-plus'
+import 'element-plus/dist/index.css'
 import '@/styles/element-variables.scss'
 
 //引入模板的全局样式
@@ -13,9 +13,6 @@ import '@/styles/index.scss'
 import 'virtual:svg-icons-register'
 //注册全局组件
 import globalComponent from '@/components/index.ts'
-
-const pinia = createPinia()
-pinia.use(piniaPluginPersistedstate)
 
 const app = createApp(App)
 

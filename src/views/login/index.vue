@@ -21,7 +21,9 @@
             />
           </el-form-item>
           <el-form-item>
-            <el-button class="login_btn" type="primary" @click="onSubmit">登录</el-button>
+            <el-button class="login_btn" type="primary" :loading="loading" @click="login"
+              >登录</el-button
+            >
           </el-form-item>
         </el-form>
       </el-col>
@@ -32,15 +34,41 @@
 <script setup lang="ts">
 import { User, Lock } from '@element-plus/icons-vue'
 import { reactive } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElNotification } from 'element-plus'
+//引入用户相关的小仓库
+import useUserStore from '@store/modules/user.ts'
+const userStore = useUserStore()
 
+const $router = useRouter()
 //收集账号和密码数据
 const loginForm = reactive({
-  username: '',
-  password: ''
+  username: 'admin',
+  password: '111111'
 })
-
-const onSubmit = () => {
-  console.log('submit!')
+//定义登录按钮加载的效果
+const loading = ref(false)
+//登录按钮的回调.
+const login = async () => {
+  loading.value = true
+  try {
+    //保证登陆成功
+    await userStore.userLogin(loginForm)
+    //编程式导航跳转到首页显示数据
+    await $router.push('./')
+    ElNotification({
+      type: 'success',
+      message: '登录成功'
+    })
+    loading.value = false
+  } catch (error) {
+    loading.value = false
+    //登陆失败的提示信息
+    ElNotification({
+      type: 'error',
+      message: (error as Error).message
+    })
+  }
 }
 </script>
 
@@ -50,6 +78,7 @@ const onSubmit = () => {
   height: 100vh;
   background: url(@/assets/images/background.jpg) no-repeat;
   background-size: cover;
+
   .login_form {
     position: relative;
     padding: 40px;
@@ -68,6 +97,7 @@ const onSubmit = () => {
       font-size: 20px;
       margin: 10px 0;
     }
+
     .login_btn {
       width: 100%;
     }
