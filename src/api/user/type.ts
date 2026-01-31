@@ -12,7 +12,8 @@ export interface loginResponseData {
 }
 
 interface dataType {
-  token: string
+  token?: string
+  message?: string
 }
 
 //定义服务器返回用户数据数据类型

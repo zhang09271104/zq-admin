@@ -3,13 +3,16 @@ import { defineStore } from 'pinia'
 //引入接口
 import { reqLogin } from '@api/user/user.ts'
 //引入数据类型
-import type { loginFormData } from '@api/user/type.ts'
+import type { loginFormData, loginResponseData } from '@api/user/type.ts'
+
+import { SET_TOKEN, GET_TOKEN } from '@utils/token.ts'
 
 const useUserStore = defineStore('user', {
   //小仓库存储数据的地方
   state: () => {
     return {
-      token: localStorage.getItem('TOKEN') //用户we
+      // token: localStorage.getItem('TOKEN') //用户唯一标识
+      token: GET_TOKEN() //用户唯一标识
     }
   },
   getters: {},
@@ -18,14 +21,15 @@ const useUserStore = defineStore('user', {
     //用户登录的方法
     async userLogin(data: loginFormData) {
       //登录请求
-      const result: any = await reqLogin(data)
+      const result: loginResponseData = await reqLogin(data)
       //登录请求成功
       if (result.code === 200) {
         //pinia仓库存储一下token
         //由于pinia|vuex存储数据其实是利用js对象
-        this.token = result.data.token
+        this.token = result.data.token as string
         //本地存储持久化数据一份
-        localStorage.setItem('TOKEN', result.data.token)
+        localStorage.setItem('TOKEN', result.data.token as string)
+        SET_TOKEN(result.data.token as string)
 
         return 'ok'
       } else {
