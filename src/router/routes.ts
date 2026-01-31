@@ -10,8 +10,8 @@ export const constantRoute = [
   //登录成功以后展示数据的路由
   {
     path: '/',
-    component: () => import('@/views/home/index.vue'),
-    name: 'Home' //命名路由
+    component: () => import('@/layout/index.vue'),
+    name: 'layout' //命名路由
   },
   //404
   {
