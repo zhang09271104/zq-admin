@@ -25,11 +25,7 @@
           </template>
         </el-menu-item>
       </template>
-      <el-sub-menu
-        v-if="item.children && item.children.length > 1"
-        :index="item.path"
-        @click="goRoute"
-      >
+      <el-sub-menu v-if="item.children && item.children.length > 1" :index="item.path">
         <template #title>
           <el-icon>
             <component :is="item.meta.icon" />
@@ -42,14 +38,20 @@
   </div>
 </template>
 <script setup lang="ts">
-defineOptions({
-  name: 'NavMenu'
-})
+// defineOptions({
+//   name: 'NavMenu'
+// })
 defineProps(['menuList'])
 
 const goRoute = (value: any) => {
-  console.log(value)
+  console.log(value.index)
 }
 </script>
+<script lang="ts">
+export default {
+  name: 'NavMenu'
+}
+</script>
+<style scoped></style>
 
 <style scoped></style>
