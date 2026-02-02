@@ -6,7 +6,7 @@
       <!--展示菜单-->
       <el-scrollbar class="scrollbar">
         <el-menu background-color="#001529" text-color="#fff">
-          <Menu :menu-list="userStore.menuRoutes" />
+          <NavMenu :menu-list="userStore.menuRoutes" />
         </el-menu>
       </el-scrollbar>
     </div>
@@ -20,7 +20,7 @@
 </template>
 <script setup lang="ts">
 import Logo from './logo/index.vue'
-import Menu from './menu/index.vue'
+import NavMenu from './menu/index.vue'
 import useUserStore from '@/store/modules/user.ts'
 const userStore = useUserStore()
 </script>

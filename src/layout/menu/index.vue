@@ -19,12 +19,15 @@
         <template #title>
           {{ item.meta.title }}
         </template>
-        <Menu :menu-list="item.children" />
+        <NavMenu :menu-list="item.children" />
       </el-sub-menu>
     </template>
   </div>
 </template>
 <script setup lang="ts">
+defineOptions({
+  name: 'NavMenu'
+})
 defineProps(['menuList'])
 </script>
 <!--<script lang="ts">-->
