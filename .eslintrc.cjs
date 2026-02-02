@@ -22,6 +22,11 @@ module.exports = {
     plugins: ['vue', '@typescript-eslint'],
     rules: {
         // Vue 规则
+        // 关闭基础的未使用变量规则
+        "no-unused-vars": "off",
+
+        // 关闭 TypeScript 特有的未使用变量规则
+        "@typescript-eslint/no-unused-vars": "off",
         'vue/multi-word-component-names': 'off',
         'vue/no-v-html': 'off',
         'vue/require-default-prop': 'off',

@@ -4,6 +4,8 @@ import { defineStore } from 'pinia'
 import { reqLogin } from '@api/user/user.ts'
 //引入数据类型
 import type { loginFormData, loginResponseData } from '@api/user/type.ts'
+//引入路由
+import { constantRoute } from '@/router/routes.ts'
 
 import { SET_TOKEN, GET_TOKEN } from '@utils/token.ts'
 
@@ -12,7 +14,8 @@ const useUserStore = defineStore('user', {
   state: () => {
     return {
       // token: localStorage.getItem('TOKEN') //用户唯一标识
-      token: GET_TOKEN() //用户唯一标识
+      token: GET_TOKEN(), //用户唯一标识
+      menuRoutes: constantRoute //仓库存储菜单数据
     }
   },
   getters: {},
