@@ -38,13 +38,14 @@
   </div>
 </template>
 <script setup lang="ts">
-// defineOptions({
-//   name: 'NavMenu'
-// })
+import { useRouter } from 'vue-router'
+
 defineProps(['menuList'])
 
+const $router = useRouter()
+
 const goRoute = (value: any) => {
-  console.log(value.index)
+  $router.push({ path: value.index })
 }
 </script>
 <script lang="ts">

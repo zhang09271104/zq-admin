@@ -14,7 +14,7 @@ export default {
     Object.entries(allComponents).forEach(([key, component]) => {
       app.component(key, component)
     })
-
+    //图标全局注册
     for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
       app.component(key, component)
     }
