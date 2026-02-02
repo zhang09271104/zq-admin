@@ -1,6 +1,7 @@
 import type { App } from 'vue'
 import SvgIcon from './SvgIcon/index.vue'
 import Pagination from './Pagination/index.vue'
+import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 
 const allComponents = {
   SvgIcon,
@@ -13,5 +14,9 @@ export default {
     Object.entries(allComponents).forEach(([key, component]) => {
       app.component(key, component)
     })
+
+    for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+      app.component(key, component)
+    }
   }
 }
