@@ -55,7 +55,7 @@ export default {
     width: $base-menu-width;
     height: 100vh;
     background: $base-menu-background;
-
+    transition: all 0.3s;
     .scrollbar {
       width: 100%;
       height: calc(100vh - $base-menu-logo-height);
@@ -77,6 +77,7 @@ export default {
     left: $base-menu-width;
     width: calc(100% - #{$base-menu-width});
     height: $base-menu-height;
+    transition: all 0.3s;
     &.fold {
       width: calc(100vw - #{$base-menu-min-width});
       left: $base-menu-min-width;
@@ -92,6 +93,7 @@ export default {
     background: #409eff;
     padding: 20px;
     overflow: auto;
+    transition: all 0.3s;
     &.fold {
       width: calc(100vw - #{$base-menu-min-width});
       left: $base-menu-min-width;
