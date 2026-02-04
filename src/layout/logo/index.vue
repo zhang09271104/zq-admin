@@ -7,6 +7,11 @@
 <script setup lang="ts">
 import setting from '@/setting.ts'
 </script>
+<script lang="ts">
+export default {
+  name: 'Logo'
+}
+</script>
 <style scoped lang="scss">
 .logo {
   display: flex;
@@ -17,11 +22,11 @@ import setting from '@/setting.ts'
   img {
     width: 40px;
     height: 40px;
-    margin-right: 10px;
   }
   p {
     font-size: $base-logo-title-fontSize;
     color: white;
+    margin-left: 10px;
   }
 }
 </style>
