@@ -1,5 +1,5 @@
 <template>
-  <el-button icon="Refresh" size="small" circle />
+  <el-button icon="Refresh" size="small" circle @click="updateRefresh" />
   <el-button icon="FullScreen" size="small" circle />
   <el-button icon="Setting" size="small" circle />
   <img src="@/assets/vue.svg" alt="" />
@@ -18,7 +18,15 @@
   </el-dropdown>
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import useLayoutSettingStore from '@store/modules/layoutSetting.ts'
+
+const layoutSettingStore = useLayoutSettingStore()
+
+const updateRefresh = () => {
+  layoutSettingStore.refsh = !layoutSettingStore.refsh
+}
+</script>
 <script lang="ts">
 export default {
   name: 'Setting'
