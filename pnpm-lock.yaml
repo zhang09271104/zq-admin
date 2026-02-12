@@ -20,6 +20,9 @@ importers:
       element-plus:
         specifier: ^2.13.0
         version: 2.13.0(vue@3.5.26(typescript@5.9.3))
+      nprogress:
+        specifier: ^0.2.0
+        version: 0.2.0
       pinia:
         specifier: ^3.0.4
         version: 3.0.4(typescript@5.9.3)(vue@3.5.26(typescript@5.9.3))
@@ -42,6 +45,9 @@ importers:
       '@types/node':
         specifier: ^24.10.1
         version: 24.10.4
+      '@types/nprogress':
+        specifier: ^0.2.3
+        version: 0.2.3
       '@typescript-eslint/eslint-plugin':
         specifier: ^8.51.0
         version: 8.51.0(@typescript-eslint/parser@8.51.0(eslint@8.57.1)(typescript@5.9.3))(eslint@8.57.1)(typescript@5.9.3)
@@ -657,6 +663,9 @@ packages:
 
   '@types/node@24.10.4':
     resolution: {integrity: sha512-vnDVpYPMzs4wunl27jHrfmwojOGKya0xyM3sH+UE5iv5uPS6vX7UIoh6m+vQc5LGBq52HBKPIn/zcSZVzeDEZg==}
+
+  '@types/nprogress@0.2.3':
+    resolution: {integrity: sha512-k7kRA033QNtC+gLc4VPlfnue58CM1iQLgn1IMAU8VPHGOj7oIHPp9UlhedEnD/Gl8evoCjwkZjlBORtZ3JByUA==}
 
   '@types/svgo@2.6.4':
     resolution: {integrity: sha512-l4cmyPEckf8moNYHdJ+4wkHvFxjyW6ulm9l4YGaOxeyBWPhBOT0gvni1InpFPdzx1dKf/2s62qGITwxNWnPQng==}
@@ -2252,6 +2261,9 @@ packages:
   normalize-wheel-es@1.2.0:
     resolution: {integrity: sha512-Wj7+EJQ8mSuXr2iWfnujrimU35R2W4FAErEyTmJoJ7ucwTn2hOUSsRehMb5RSYkxXGTM7Y9QpvPmp++w5ftoJw==}
 
+  nprogress@0.2.0:
+    resolution: {integrity: sha512-I19aIingLgR1fmhftnbWWO3dXc0hSxqHQHQb3H8m+K3TnEn/iSeTZZOyvKXWqQESMwuUVnatlCnZdLBZZt2VSA==}
+
   nth-check@2.1.1:
     resolution: {integrity: sha512-lqjrjmaOoAnWfMmBPL+XNnynZh2+swxiX3WUE0s4yEHI6m+AwrK2UZOimIRl3X/4QctVqS8AiZjFqyOGrMXb/w==}
 
@@ -3591,6 +3603,8 @@ snapshots:
   '@types/node@24.10.4':
     dependencies:
       undici-types: 7.16.0
+
+  '@types/nprogress@0.2.3': {}
 
   '@types/svgo@2.6.4':
     dependencies:
@@ -5416,6 +5430,8 @@ snapshots:
   normalize-path@3.0.0: {}
 
   normalize-wheel-es@1.2.0: {}
+
+  nprogress@0.2.0: {}
 
   nth-check@2.1.1:
     dependencies:

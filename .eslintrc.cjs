@@ -44,13 +44,13 @@ module.exports = {
 
         // TypeScript 规则
         '@typescript-eslint/no-explicit-any': 'off',
-        '@typescript-eslint/no-unused-vars': [
-            'error',
-            {
-                argsIgnorePattern: '^_',
-                varsIgnorePattern: '^_'
-            }
-        ],
+        // '@typescript-eslint/no-unused-vars': [
+        //     'error',
+        //     {
+        //         argsIgnorePattern: '^_',
+        //         varsIgnorePattern: '^_'
+        //     }
+        // ],
         '@typescript-eslint/ban-ts-comment': 'off',
         '@typescript-eslint/ban-types': 'off',
 

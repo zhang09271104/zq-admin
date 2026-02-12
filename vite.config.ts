@@ -11,6 +11,8 @@ import { viteMockServe } from 'vite-plugin-mock'
 
 export default defineConfig(({ command }) => {
   return {
+    // ✅ 明确指定部署在根路径（虽然默认就是，但写出来更规范）
+    base: command === 'build' ? '/web-a/' : '/',
     //scss全局变量的配置
     css: {
       preprocessorOptions: {

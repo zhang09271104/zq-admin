@@ -15,13 +15,6 @@ interface dataType {
   token?: string
   message?: string
 }
-
-//定义服务器返回用户数据数据类型
-export interface userResponseData {
-  code: number
-  data: user
-}
-
 interface user {
   checkUser: userInfo
 }
@@ -35,4 +28,9 @@ interface userInfo {
   buttons: string[]
   routes: string[]
   token: string
+}
+//定义服务器返回用户数据数据类型
+export interface userResponseData {
+  code: number
+  data: user
 }

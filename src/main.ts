@@ -6,6 +6,8 @@ import pinia from '@/store/index.ts'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import '@/styles/element-variables.scss'
+//引入路由鉴权文件
+import './permisstion.ts'
 
 //引入模板的全局样式
 import '@/styles/index.scss'

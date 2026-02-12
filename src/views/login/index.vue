@@ -22,8 +22,8 @@
           </el-form-item>
           <el-form-item>
             <el-button class="login_btn" type="primary" :loading="loading" @click="login"
-              >登录</el-button
-            >
+              >登录
+            </el-button>
           </el-form-item>
         </el-form>
       </el-col>
@@ -34,18 +34,21 @@
 <script setup lang="ts">
 import { User, Lock } from '@element-plus/icons-vue'
 import { reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { ElNotification } from 'element-plus'
 //引入获取当前时间的函数
 import { getTime } from '@utils/time.ts'
 //引入用户相关的小仓库
 import useUserStore from '@store/modules/user.ts'
+
 const userStore = useUserStore()
 
 //获取表单实例
 const loginFormRef = ref()
 
 const $router = useRouter()
+const $route = useRoute()
+
 //收集账号和密码数据
 const loginForm = reactive({
   username: 'admin',
@@ -92,7 +95,9 @@ const login = async () => {
     //保证登陆成功
     await userStore.userLogin(loginForm)
     //编程式导航跳转到首页显示数据
-    await $router.push('./')
+    const redirect: any = $route.query.redirect
+    //判断登录的时候，路由路径是否有query参数，如果有就往query参数挑战，没有就跳转首页
+    await $router.push({ path: redirect || '/' })
     ElNotification({
       type: 'success',
       // title:'Hi,'+getTime()+'好！',
